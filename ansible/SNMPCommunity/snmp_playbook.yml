@@ -1,0 +1,45 @@
+---
+
+  - name: GENERATE & DEPLOY SNMP COMMUNITY CONFIG
+    hosts: sandbox
+    connection: network_cli
+    gather_facts: no
+
+    tasks:
+      
+      - name: GENERATE CONFIGURATIONS
+        template:
+          src: snmp.j2
+          dest: ./configs/{{ inventory_hostname }}-snmp.cfg
+        tags: build
+
+      - name: GET CURRENT SNMP COMMUNITIES
+        ios_command:
+          commands: show run | include snmp-server_community
+        register: snmp_current
+        tags: get, clear
+
+      - name: Print the current communities
+        debug: 
+          msg: "Current Communities: {{ item }}"
+        with_items: "{{ snmp_current.stdout_lines }}"
+        when: item != ""
+        tags: get, clear
+
+      - name: DELETE CURRENT SNMP COMMUNITIES
+        ios_config:
+          commands: "no {{ item }}"
+        with_items: "{{ snmp_current.stdout_lines }}"
+        when: item != ""
+        tags: clear
+
+      - name: CLEAR SNMP CONFIG
+        ios_config:
+          lines: no snmp-server
+        tags: clear
+
+      - name: DEPLOY CONFIGS
+        ios_config:
+          src: ./configs/{{ inventory_hostname }}-snmp.cfg
+        tags: push
+

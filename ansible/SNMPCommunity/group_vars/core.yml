@@ -1,0 +1,10 @@
+---
+
+snmp:
+  contact: Sam
+  location: Atlanta
+  communities:
+    - community: private
+      type: RW
+    - community: public123
+      type: RO

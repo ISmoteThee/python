@@ -1,0 +1,9 @@
+<user>
+	<name>john</name>
+	<location>
+		<city>Corpus Cristi</city>
+		<state>TX</state>
+	</location>
+	<roles>admin</roles>
+	<roles>user</roles>
+</user>

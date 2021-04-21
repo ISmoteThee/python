@@ -1,0 +1,8 @@
+user:
+  location:
+    city: Corpus Christie
+    state: TX
+  name: john
+  roles:
+  - admin
+  - user

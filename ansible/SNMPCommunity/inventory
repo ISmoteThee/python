@@ -1,0 +1,27 @@
+
+[cpe]
+csr1kv1
+csr1kv3
+
+[core]
+csr1kv2  loopback_id=2
+
+[sandbox]
+ios-xe-mgmt.cisco.com:8181
+
+[usa:children]
+cpe
+core
+
+[usa:vars]
+ansible_ssh_password=cisco
+ansible_user=cisco
+ansible_network_os=ios
+
+[cpe:vars]
+location=California
+
+[core:vars]
+location=NYC
+
+

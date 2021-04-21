@@ -1,0 +1,11 @@
+# Inventory file for Ansible
+
+[XE]
+ios-xe-mgmt.cisco.com:8181
+# ios-xe-mgmt-latest.cisco.com:8181
+
+[XR]
+sbx-iosxr-mgmt.cisco.com:8181
+
+[all:vars]
+ansible_network_os=ios

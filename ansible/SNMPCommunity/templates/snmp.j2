@@ -1,0 +1,5 @@
+snmp-server contact {{ snmp['contact'] }}
+snmp-server location {{ snmp['location'] }}
+{% for settings in snmp['communities'] %}
+snmp-server community {{ settings['community'] }} {{ settings['type'] }}
+{% endfor %}
