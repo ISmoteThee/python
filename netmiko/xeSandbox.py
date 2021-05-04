@@ -8,5 +8,5 @@ xeRtr = {
     'port': 8181
 }
 
-# conection = ConnectHandler(**xeRtr)
-# conection.send_command('show ip int br')
+conection = ConnectHandler(**xeRtr)
+conection.send_command('show ip int br')
