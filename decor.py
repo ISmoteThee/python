@@ -16,7 +16,7 @@ def times2(num):
 def first_letter(word):
     return word[0]
 
-if __name__ == __main__:
+if __name__ == "__main__":
     print(times2(2))
     times2('Not A Number')
     print(first_letter('Hello World'))
