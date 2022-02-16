@@ -18,6 +18,7 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
+import base64
 import time
 import os
 import traceback
@@ -28,8 +29,10 @@ from distutils.version import LooseVersion
 
 from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 from ansible.module_utils.six import iteritems, string_types
-from ansible.module_utils._text import to_native
+from ansible.module_utils._text import to_native, to_bytes, to_text
 from ansible.module_utils.common.dict_transformations import dict_merge
+from ansible.module_utils.parsing.convert_bool import boolean
+
 
 K8S_IMP_ERR = None
 try:
@@ -181,11 +184,32 @@ WAIT_ARG_SPEC = dict(
         default=None,
         options=dict(
             type=dict(),
-            status=dict(default=True, choices=[True, False, "Unknown"]),
+            status=dict(type='str', default="True", choices=["True", "False", "Unknown"]),
             reason=dict()
         )
     )
 )
+
+DELETE_OPTS_ARG_SPEC = {
+    'propagationPolicy': {
+        'choices': ['Foreground', 'Background', 'Orphan'],
+    },
+    'gracePeriodSeconds': {
+        'type': 'int',
+    },
+    'preconditions': {
+        'type': 'dict',
+        'options': {
+            'resourceVersion': {
+                'type': 'str',
+            },
+            'uid': {
+                'type': 'str',
+            }
+        }
+    }
+}
+
 
 # Map kubernetes-client parameters to ansible parameters
 AUTH_ARG_MAP = {
@@ -252,7 +276,12 @@ class K8sAnsibleMixin(object):
                     self.fail(msg='Failed to load kubeconfig due to %s' % to_native(err))
 
         # Override any values in the default configuration with Ansible parameters
-        configuration = kubernetes.client.Configuration()
+        # As of kubernetes-client v12.0.0, get_default_copy() is required here
+        try:
+            configuration = kubernetes.client.Configuration().get_default_copy()
+        except AttributeError:
+            configuration = kubernetes.client.Configuration()
+
         for key, value in iteritems(auth):
             if key in AUTH_ARG_MAP.keys() and value is not None:
                 if key == 'api_key':
@@ -281,43 +310,71 @@ class K8sAnsibleMixin(object):
     def kubernetes_facts(self, kind, api_version, name=None, namespace=None, label_selectors=None, field_selectors=None,
                          wait=False, wait_sleep=5, wait_timeout=120, state='present', condition=None):
         resource = self.find_resource(kind, api_version)
-        if not resource:
-            return dict(resources=[])
+        api_found = bool(resource)
+        if not api_found:
+            return dict(resources=[], msg='Failed to find API for resource with apiVersion "{0}" and kind "{1}"'.format(api_version, kind), api_found=False)
 
         if not label_selectors:
             label_selectors = []
         if not field_selectors:
             field_selectors = []
 
+        result = None
         try:
-            result = resource.get(name=name,
-                                  namespace=namespace,
+            result = resource.get(name=name, namespace=namespace,
                                   label_selector=','.join(label_selectors),
                                   field_selector=','.join(field_selectors))
-            if wait:
-                satisfied_by = []
-                if isinstance(result, ResourceInstance):
-                    # We have a list of ResourceInstance
-                    resource_list = result.get('items', [])
-                    if not resource_list:
-                        resource_list = [result]
+        except openshift.dynamic.exceptions.BadRequestError:
+            return dict(resources=[], api_found=True)
+        except openshift.dynamic.exceptions.NotFoundError:
+            if not wait or name is None:
+                return dict(resources=[], api_found=True)
 
-                    for resource_instance in resource_list:
-                        success, res, duration = self.wait(resource, resource_instance,
-                                                           sleep=wait_sleep, timeout=wait_timeout,
-                                                           state=state, condition=condition)
-                        if not success:
-                            self.fail(msg="Failed to gather information about %s(s) even"
-                                          " after waiting for %s seconds" % (res.get('kind'), duration))
-                        satisfied_by.append(res)
-                    return dict(resources=satisfied_by)
+        if not wait:
             result = result.to_dict()
-        except (openshift.dynamic.exceptions.BadRequestError, openshift.dynamic.exceptions.NotFoundError):
-            return dict(resources=[])
+            if 'items' in result:
+                return dict(resources=result['items'], api_found=True)
+            return dict(resources=[result], api_found=True)
+
+        start = datetime.now()
+
+        def _elapsed():
+            return (datetime.now() - start).seconds
+
+        if result is None:
+            while _elapsed() < wait_timeout:
+                try:
+                    result = resource.get(name=name, namespace=namespace,
+                                          label_selector=','.join(label_selectors),
+                                          field_selector=','.join(field_selectors))
+                    break
+                except NotFoundError:
+                    pass
+                time.sleep(wait_sleep)
+            if result is None:
+                return dict(resources=[], api_found=True)
+
+        if isinstance(result, ResourceInstance):
+            satisfied_by = []
+            # We have a list of ResourceInstance
+            resource_list = result.get('items', [])
+            if not resource_list:
+                resource_list = [result]
+
+            for resource_instance in resource_list:
+                success, res, duration = self.wait(resource, resource_instance,
+                                                   sleep=wait_sleep, timeout=wait_timeout,
+                                                   state=state, condition=condition)
+                if not success:
+                    self.fail(msg="Failed to gather information about %s(s) even"
+                                  " after waiting for %s seconds" % (res.get('kind'), duration))
+                satisfied_by.append(res)
+            return dict(resources=satisfied_by, api_found=True)
+        result = result.to_dict()
 
         if 'items' in result:
-            return dict(resources=result['items'])
-        return dict(resources=[result])
+            return dict(resources=result['items'], api_found=True)
+        return dict(resources=[result], api_found=True)
 
     def remove_aliases(self):
         """
@@ -433,7 +490,7 @@ class K8sAnsibleMixin(object):
                         return match.reason == condition['reason']
                 return False
             status = True if match.status == 'True' else False
-            if status == condition['status']:
+            if status == boolean(condition['status'], strict=False):
                 if condition.get('reason'):
                     return match.reason == condition['reason']
                 return True
@@ -586,6 +643,7 @@ class K8sAnsibleMixin(object):
         return definition
 
     def perform_action(self, resource, definition):
+        delete_options = self.params.get('delete_options')
         result = {'changed': False, 'result': {}}
         state = self.params.get('state', None)
         force = self.params.get('force', False)
@@ -625,8 +683,8 @@ class K8sAnsibleMixin(object):
         except DynamicApiError as exc:
             self.fail_json(msg='Failed to retrieve requested object: {0}'.format(exc.body),
                            error=exc.status, status=exc.status, reason=exc.reason)
-        except Exception as exc:
-            self.fail_json(msg='Failed to retrieve requested object: {0}'.format(to_native(exc)),
+        except ValueError as value_exc:
+            self.fail_json(msg='Failed to retrieve requested object: {0}'.format(to_native(value_exc)),
                            error='', status='', reason='')
 
         if state == 'absent':
@@ -638,6 +696,13 @@ class K8sAnsibleMixin(object):
                 # Delete the object
                 result['changed'] = True
                 if not self.check_mode:
+                    if delete_options:
+                        body = {
+                            'apiVersion': 'v1',
+                            'kind': 'DeleteOptions',
+                        }
+                        body.update(delete_options)
+                        params['body'] = body
                     try:
                         k8s_obj = resource.delete(**params)
                         result['result'] = k8s_obj.to_dict()
@@ -653,7 +718,7 @@ class K8sAnsibleMixin(object):
         else:
             if self.apply:
                 if self.check_mode:
-                    ignored, patch = apply_object(resource, definition)
+                    ignored, patch = apply_object(resource, _encode_stringdata(definition))
                     if existing:
                         k8s_obj = dict_merge(existing.to_dict(), patch)
                     else:
@@ -684,7 +749,7 @@ class K8sAnsibleMixin(object):
 
             if not existing:
                 if self.check_mode:
-                    k8s_obj = definition
+                    k8s_obj = _encode_stringdata(definition)
                 else:
                     try:
                         k8s_obj = resource.create(definition, namespace=namespace).to_dict()
@@ -700,6 +765,11 @@ class K8sAnsibleMixin(object):
                         if self.warnings:
                             msg += "\n" + "\n    ".join(self.warnings)
                         self.fail_json(msg=msg, error=exc.status, status=exc.status, reason=exc.reason)
+                    except Exception as exc:
+                        msg = "Failed to create object: {0}".format(exc)
+                        if self.warnings:
+                            msg += "\n" + "\n    ".join(self.warnings)
+                        self.fail_json(msg=msg, error='', status='', reason='')
                 success = True
                 result['result'] = k8s_obj
                 if wait and not self.check_mode:
@@ -715,7 +785,7 @@ class K8sAnsibleMixin(object):
 
             if existing and force:
                 if self.check_mode:
-                    k8s_obj = definition
+                    k8s_obj = _encode_stringdata(definition)
                 else:
                     try:
                         k8s_obj = resource.replace(definition, name=name, namespace=namespace, append_hash=self.append_hash).to_dict()
@@ -739,7 +809,7 @@ class K8sAnsibleMixin(object):
 
             # Differences exist between the existing obj and requested params
             if self.check_mode:
-                k8s_obj = dict_merge(existing.to_dict(), definition)
+                k8s_obj = dict_merge(existing.to_dict(), _encode_stringdata(definition))
             else:
                 if LooseVersion(self.openshift_version) < LooseVersion("0.6.2"):
                     k8s_obj, error = self.patch_resource(resource, definition, existing, name,
@@ -816,3 +886,12 @@ class KubernetesAnsibleModule(AnsibleModule, K8sAnsibleMixin):
 
         self.warn("class KubernetesAnsibleModule is deprecated"
                   " and will be removed in 2.0.0. Please use K8sAnsibleMixin instead.")
+
+
+def _encode_stringdata(definition):
+    if definition['kind'] == 'Secret' and 'stringData' in definition:
+        for k, v in definition['stringData'].items():
+            encoded = base64.b64encode(to_bytes(v))
+            definition.setdefault('data', {})[k] = to_text(encoded)
+        del definition['stringData']
+    return definition

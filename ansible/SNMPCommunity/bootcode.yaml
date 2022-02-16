@@ -1,0 +1,21 @@
+---
+
+  - name: GENERATE & DEPLOY SNMP COMMUNITY CONFIG
+    hosts: sandbox
+    connection: network_cli
+    gather_facts: no
+
+    tasks:
+
+      - name: GET CURRENT BOOT CODE
+        ios_command:
+          commands: show version | include boot
+        register: boot_code
+        tags: get, clear
+
+      - name: Print the current BOOTCODE
+        debug: 
+          msg: "Current Communities: {{ item }}"
+        with_items: "{{ snmp_current.stdout_lines }}"
+        when: item != ""
+        tags: get, clear    

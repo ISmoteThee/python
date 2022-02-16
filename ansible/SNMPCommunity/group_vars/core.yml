@@ -1,10 +1,14 @@
 ---
 
 snmp:
-  contact: Sam
-  location: Atlanta
+  contact: Admin
+  location: New York
   communities:
     - community: private
       type: RW
     - community: public123
+      type: RO
+    - community: privateAccess
+      type: RW
+    - community: ReadOnly
       type: RO

@@ -1,0 +1,6 @@
+Switch Ports Model SW Version SW Image Mode
+------ ----- ----- ---------- ---------- ----
+* 1 32 WS-C3850-24T Denali 16.1.1 CAT3K_CAA-UNIVERSALK9 INSTALL
+
+Configuration register is 0x102
+

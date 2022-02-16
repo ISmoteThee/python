@@ -22,11 +22,14 @@ def test_false_when_smaller():
     testresult = [is_greater(4, 5), False]
     return testresult
 
+#test_false_when_smaller = publish_result(test_false_when_smaller)
 
 @publish_result
 def test_false_when_equal():
     testresult = [is_greater(5, 5), False]
     return testresult
+
+#test_false_when_equal = publish_result(test_false_when_equal)
 
 
 if __name__ == "__main__":

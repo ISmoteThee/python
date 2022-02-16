@@ -8,11 +8,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
-ANSIBLE_METADATA = {'metadata_version': '1.1',
-                    'status': ['preview'],
-                    'supported_by': 'community'}
-
-
 DOCUMENTATION = '''
 ---
 module: azure_rm_loadbalancer
@@ -211,7 +206,7 @@ options:
                     - This element is only used when the protocol is set to TCP.
             enable_floating_ip:
                 description:
-                    - Configures SNAT for the VMs in the backend pool to use the publicIP address specified in the frontend of the load balancing rule.
+                    - Configures a virtual machine's endpoint for the floating IP capability required to configure a SQL AlwaysOn Availability Group.
     inbound_nat_rules:
         description:
             - Collection of inbound NAT Rules used by a load balancer.

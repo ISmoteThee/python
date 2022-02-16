@@ -36,6 +36,11 @@ inspur.sm.add_user -- Create user.
 
 .. Deprecated
 
+DEPRECATED
+----------
+:Removed in: version 3.0.0
+:Why: Merge functions into the :ref:`inspur.sm.user <ansible_collections.inspur.sm.user_module>` module.
+:Alternative: Use :ref:`inspur.sm.user <ansible_collections.inspur.sm.user_module>` instead.
 
 Synopsis
 --------
@@ -258,6 +263,7 @@ Examples
     
     - name: Add user test
       hosts: ism
+      no_log: true
       connection: local
       gather_facts: no
       vars:
@@ -271,7 +277,7 @@ Examples
       - name: "Add user"
         inspur.sm.add_user:
           uname: "wbs"
-          upass: "admin"
+          upass: my_password
           role_id: "Administrator"
           priv: "kvm,sol"
           provider: "{{ ism }}"
@@ -345,6 +351,15 @@ Common return values are documented :ref:`here <common_return_values>`, the foll
     <br/><br/>
 
 ..  Status (Presently only deprecated)
+
+Status
+------
+
+.. Deprecated note
+
+- This module will be removed in version 3.0.0.
+  *[deprecated]*
+- For more information see `DEPRECATED`_.
 
 
 .. Authors

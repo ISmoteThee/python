@@ -1,0 +1,10 @@
+---
+
+- name: Backup device configs
+  hosts: sandbox
+  gather_facts: no
+
+  tasks:
+    - name: Backup Running Configs
+      ios_config:
+        backup: yes

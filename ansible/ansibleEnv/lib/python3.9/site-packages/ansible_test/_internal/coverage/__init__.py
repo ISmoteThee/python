@@ -163,8 +163,8 @@ def enumerate_python_arcs(
     try:
         original.read_file(path)
     except Exception as ex:  # pylint: disable=locally-disabled, broad-except
-        with open_binary_file(path) as file:
-            header = file.read(6)
+        with open_binary_file(path) as file_obj:
+            header = file_obj.read(6)
 
         if header == b'SQLite':
             display.error('File created by "coverage" 5.0+: %s' % os.path.relpath(path))
@@ -287,6 +287,8 @@ def sanitize_filename(
         new_name = re.sub(r'^.*' + re.escape(integration_temp_path) + '[^/]+/', root_path, filename)
         display.info('%s -> %s' % (filename, new_name), verbosity=3)
         filename = new_name
+
+    filename = os.path.abspath(filename)  # make sure path is absolute (will be relative if previously exported)
 
     return filename
 
