@@ -5,8 +5,11 @@ xrRtr = {
     'host': 'sbx-iosxr-mgmt.cisco.com',
     'username': 'admin',
     'password': 'C1sco12345',
-    'port': 8181
+    'port': 80
 }
 
-# conection = ConnectHandler(**xrRtr)
-# conection.send_command('show ip int br')
+
+if __name__ == "__main__":
+  conection = ConnectHandler(**xrRtr)
+  iPintStatus = conection.send_command('show ip int br | in Gig')
+  print(iPintStatus)

@@ -27,7 +27,8 @@ def findPrimes(bottom = 1, top = 200):
     #print(primes)
     end_time = datetime.datetime.now()
     print(end_time - start_time)
+    print(f'My name is {__name__}')
     return(primes)
 
 if __name__ == "__main__":
-    findPrimes()
+    print(findPrimes())

@@ -159,6 +159,47 @@
           - multi_pod_two_remove is successful
           - multi_pod_two_remove.changed
 
+    - name: "Look for existing API"
+      k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+      register: existing_api
+
+    - name: Check if we informed the user the api does exist
+      assert:
+        that:
+          - existing_api.api_found
+
+    - name: "Look for non-existent API"
+      k8s_info:
+        api_version: pleasedonotcreatethisresource.example.com/v7
+        kind: DoesNotExist
+      register: dne_api
+
+    - name: Check if we informed the user the api does not exist
+      assert:
+        that:
+          - not dne_api.resources
+          - not dne_api.api_found
+
+    - name: Start timer
+      set_fact:
+        start: "{{ lookup('pipe', 'date +%s') }}"
+
+    - name: Wait for non-existent pod to be created
+      k8s_info:
+        kind: Pod
+        name: does-not-exist
+        namespace: "{{ wait_namespace }}"
+        wait: yes
+        wait_timeout: 45
+      register: result
+
+    - name: Check that module waited
+      assert:
+        that:
+          - "{{ lookup('pipe', 'date +%s') }} - {{ start }} > 30"
+
   always:
     - name: Remove namespace
       k8s:

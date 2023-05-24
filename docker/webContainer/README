@@ -1,0 +1,10 @@
+1. Build the image:
+    docker build -t hello-world .
+
+2. Run a container
+    A. without volume (changes to file in /src will not change image or output)
+        docker run -p 80:80 hello-world
+
+    B. with volume on host so chnges to /src take effect.
+        docker run -p 80:80 -v /Users/motes/python/docker/webContainer/src/:/var/www/html hello-world
+        

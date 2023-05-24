@@ -112,6 +112,12 @@ EXAMPLES = r'''
 '''
 
 RETURN = r'''
+api_found:
+  description:
+  - Whether the specified api_version and kind were successfully mapped to an existing API on the targeted cluster.
+  - Version added 1.2.0.
+  returned: always
+  type: bool
 resources:
   description:
   - The object(s) that exists

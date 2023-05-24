@@ -7,7 +7,9 @@ csr1kv3
 csr1kv2  loopback_id=2
 
 [sandbox]
-ios-xe-mgmt.cisco.com:8181
+sandbox-iosxe-recomm-1.cisco.com
+sandbox-iosxe-latest-1.cisco.com
+
 
 [usa:children]
 cpe

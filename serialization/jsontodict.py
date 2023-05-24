@@ -1,6 +1,6 @@
 import json
 
-with open('user.json','r') as file:
+with open('autoGen/user.json','r') as file:
     data = json.load(file)
 user = data['user']
 print(user['name'])

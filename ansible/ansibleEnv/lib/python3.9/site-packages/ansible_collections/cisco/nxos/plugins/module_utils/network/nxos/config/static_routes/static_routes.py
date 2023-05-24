@@ -197,9 +197,9 @@ class Static_routes(ConfigBase):
                                     )
                                     want_next_hops = []
                                     if "next_hops" in want_dest.keys():
-                                        want_next_hops = [
-                                            nh for nh in want_dest["next_hops"]
-                                        ]
+                                        want_next_hops = list(
+                                            want_dest["next_hops"]
+                                        )
                                     if len(want_next_hops) > 0:
                                         for next_hop in ro["next_hops"]:
                                             if next_hop not in want_next_hops:
@@ -300,12 +300,9 @@ class Static_routes(ConfigBase):
                         self.del_commands(
                             [
                                 {
-                                    "address_families": [
-                                        h
-                                        for h in obj_in_have[
-                                            "address_families"
-                                        ]
-                                    ],
+                                    "address_families": list(
+                                        obj_in_have["address_families"]
+                                    ),
                                     "vrf": obj_in_have["vrf"],
                                 }
                             ]
@@ -462,7 +459,13 @@ class Static_routes(ConfigBase):
         for h in have:
             if h != {"vrf": "default"}:
                 vrf = h["vrf"]
-                commands.append("vrf context " + vrf)
+                if "default" not in vrf:
+                    commands.append("vrf context " + vrf)
+                else:
+                    # Default static routes are configured in global context.
+                    # "vrf context default" command throws error 9.X release onwards.
+                    # Changing the context to global is achieved by "configure terminal"
+                    commands.append("configure terminal")
                 for af in h["address_families"]:
                     for route in af["routes"]:
                         for next_hop in route["next_hops"]:
@@ -544,9 +547,7 @@ class Static_routes(ConfigBase):
                                                 h3 = (
                                                     x
                                                 )  # this has the have dict with same vrf, afi and dest as want
-                                        next_hop_list = [
-                                            h for h in h3["next_hops"]
-                                        ]
+                                        next_hop_list = list(h3["next_hops"])
                                         if "next_hops" in ro.keys():
                                             for nh in ro["next_hops"]:
                                                 if "interface" in nh.keys():
@@ -600,7 +601,13 @@ class Static_routes(ConfigBase):
         else:
             com = "ipv6 route " + ro["dest"] + " " + self.add_commands(nh)
         commands.append(com.strip())
-        string = "vrf context " + str(vrf)
+        if "default" not in vrf:
+            string = "vrf context " + str(vrf)
+        else:
+            # Default static routes are configured in global context.
+            # "vrf context default" command throws error 9.X release onwards.
+            # Changing the context to global is achieved by "configure terminal"
+            string = "configure terminal"
         if string not in commands:
             commands.insert(0, string)
         return commands

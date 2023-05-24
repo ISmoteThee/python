@@ -1,0 +1,1 @@
+In the above example, we had an empty string in our quote marks, which means that no spaces were added between our text on the new line. However, if we had added a space in the quote marks, we would have one in our code. In addition, you can add in whatever you want to the end parameter, and that will be what separates your strings on the new line.

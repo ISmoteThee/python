@@ -43,6 +43,7 @@ Synopsis
 .. Description
 
 - Set SMTP information on Inspur server.
+- Only the M5 models support this feature.
 
 .. Aliases
 
@@ -456,6 +457,7 @@ Examples
     
     - name: Smtp test
       hosts: ism
+      no_log: true
       connection: local
       gather_facts: no
       vars:
@@ -485,7 +487,7 @@ Examples
           primary_name: "inspur"
           primary_auth: "enable"
           primary_username: "test"
-          primary_password: "123456"
+          primary_password: my_password
           provider: "{{ ism }}"
 
 

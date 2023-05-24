@@ -1,0 +1,5 @@
+Run like this:
+
+ansible-playbook -i inventory snmp_playbook.yml --ask-pass
+
+Optional Tags with -t (see playbook for tag function)

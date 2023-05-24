@@ -77,7 +77,9 @@ options:
     type: bool
   access_level:
     description:
-      - Determines if a runner can pick up jobs from protected branches.
+      - Determines if a runner can pick up jobs only from protected branches.
+      - If set to C(ref_protected), runner can pick up jobs only from protected branches.
+      - If set to C(not_protected), runner can pick up jobs from both protected and unprotected branches.
     required: False
     default: ref_protected
     choices: ["ref_protected", "not_protected"]
@@ -167,7 +169,7 @@ except Exception:
 
 from ansible.module_utils.api import basic_auth_argument_spec
 from ansible.module_utils.basic import AnsibleModule, missing_required_lib
-from ansible.module_utils._text import to_native
+from ansible.module_utils.common.text.converters import to_native
 
 from ansible_collections.community.general.plugins.module_utils.gitlab import gitlabAuthentication
 
